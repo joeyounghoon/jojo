@@ -1,42 +1,35 @@
 import streamlit as st
-import openai
+from PIL import Image, ImageOps
+import io
 
-# Streamlit 페이지 설정
-st.set_page_config(page_title="OpenAI Chatbot", page_icon=":robot_face:")
+# Streamlit 앱 설정
+st.title("그림 파일을 흑백으로 변환하는 웹 앱")
+st.write("그림 파일을 업로드하면 흑백으로 변환해드립니다.")
 
-# API Key 입력 받기
-api_key = st.text_input("Enter your OpenAI API key:", type="password")
+# 사용자로부터 이미지 파일 업로드 받기
+uploaded_file = st.file_uploader("이미지 파일을 업로드하세요", type=["jpg", "jpeg", "png"])
 
-# 챗봇 상호작용 기록 초기화
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
+# 이미지 업로드 시 처리
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
 
-# OpenAI API 호출 함수
-def get_openai_response(api_key, user_input):
-    openai.api_key = api_key
-    try:
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=user_input,
-            max_tokens=150,
-            n=1,
-            stop=None,
-            temperature=0.7,
-        )
-        return response.choices[0].text.strip()
-    except Exception as e:
-        return str(e)
+    # 원본 이미지 표시
+    st.image(image, caption="원본 이미지", use_column_width=True)
 
-# 사용자 입력 처리
-if api_key:
-    user_input = st.text_input("You:", key="user_input")
-    if user_input:
-        response = get_openai_response(api_key, user_input)
-        st.session_state.chat_history.append(f"You: {user_input}")
-        st.session_state.chat_history.append(f"Assistant: {response}")
-        st.experimental_rerun()
+    # 이미지 흑백 변환 함수
+    def convert_to_black_and_white(image):
+        # 이미지를 흑백으로 변환
+        grayscale_image = ImageOps.grayscale(image)
+        return grayscale_image
 
-# 챗봇 대화 기록 표시
-st.subheader("Chatbot Conversation")
-for message in st.session_state.chat_history:
-    st.write(message)
+    # 흑백 이미지 변환
+    bw_image = convert_to_black_and_white(image)
+
+    # 흑백 이미지 표시
+    st.image(bw_image, caption="흑백 이미지", use_column_width=True)
+
+    # 흑백 이미지 다운로드 버튼
+    buf = io.BytesIO()
+    bw_image.save(buf, format="PNG")
+    byte_im = buf.getvalue()
+    st.download_button(label="흑백 이미지 다운로드", data=byte_im, file_name="bw_image.png", mime="image/png")
